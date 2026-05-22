@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Biscuit Vision - Live Tracking Eye v1</title>
+<style>
+:root{--bg:#050505;--panel:#121212;--gold:#ffb347;--green:#00ff99;--blue:#7dd7ff;--red:#ff5f6d}
+*{box-sizing:border-box}body{margin:0;padding:20px;background:radial-gradient(circle at top left,rgba(255,179,71,.15),transparent 35%),radial-gradient(circle at bottom right,rgba(0,255,153,.12),transparent 35%),var(--bg);color:#eee;font-family:Consolas,monospace}
+h1{margin:0 0 8px;color:var(--gold)}p{color:#bbb;line-height:1.45}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:950px){.grid{grid-template-columns:1fr}}
+.panel{margin-top:16px;padding:16px;background:#121212;border:1px solid #333;border-radius:18px}.label{color:var(--gold);font-weight:900;margin-bottom:10px}
+canvas,video{width:100%;background:#020202;border:1px solid #222;border-radius:14px;display:block}
+button{margin:8px 8px 0 0;padding:10px 14px;border:0;border-radius:12px;background:var(--gold);font-weight:900;cursor:pointer;color:#111}
+button.good{background:var(--green)}button.alt{background:var(--blue)}button.bad{background:var(--red)}
+.big{font-size:22px;line-height:1.55;color:var(--gold);background:#070707;border:1px dashed #555;border-radius:14px;padding:14px;min-height:76px;word-break:break-word}
+pre{white-space:pre-wrap;word-break:break-word;color:#8cffc1;line-height:1.45}.bar{height:14px;background:#222;border-radius:999px;overflow:hidden;margin-top:10px}.fill{height:100%;background:var(--green);width:0%;transition:.18s}
+.gene{display:inline-block;padding:7px 10px;margin:4px;border-radius:999px;background:#080808;border:1px solid rgba(0,255,153,.45);color:var(--green)}.warn{border-color:rgba(255,95,109,.45);color:var(--red)}.small{font-size:12px;color:#888}
+</style>
+</head>
+<body>
+<h1>👁 Biscuit Vision — Live Tracking Eye v1</h1>
+<p>Continuous webcam perception: live deformation language, motion trail, lock confidence, and saved perspective genes.</p>
+
+<div class="grid">
+<div class="panel"><div class="label">1. Truth Shape / Test Paper</div><canvas id="truth" width="520" height="520"></canvas>
+<button onclick="drawShape('circle')">○ Circle</button><button class="alt" onclick="drawShape('triangle')">△ Triangle</button><button class="alt" onclick="drawShape('square')">□ Square</button><button onclick="downloadTarget()">Download Target</button>
+<p class="small">Show this on a screen or print it, then point your phone/webcam at it.</p></div>
+<div class="panel"><div class="label">2. Live Camera</div><video id="video" autoplay playsinline muted></video><canvas id="frame" width="520" height="520" style="display:none"></canvas>
+<button class="good" onclick="startCamera()">Start Camera</button><button onclick="toggleTracking()">Start / Stop Tracking</button><button class="bad" onclick="saveGene()">Save Current Gene</button></div>
+</div>
+
+<div class="grid">
+<div class="panel"><div class="label">3. Live Eye Overlay</div><canvas id="overlay" width="520" height="520"></canvas></div>
+<div class="panel"><div class="label">4. Live Deformation Language</div><div id="sentence" class="big">waiting for camera...</div><div class="bar"><div id="lockFill" class="fill"></div></div><pre id="report"></pre></div>
+</div>
+
+<div class="grid">
+<div class="panel"><div class="label">5. Motion Trail</div><canvas id="trail" width="520" height="240"></canvas></div>
+<div class="panel"><div class="label">6. Learned Tracking Genes</div><div id="genes"></div></div>
+</div>
+
+<script>
+const truth=document.getElementById('truth'), video=document.getElementById('video'), frame=document.getElementById('frame'), overlay=document.getElementById('overlay'), trail=document.getElementById('trail');
+const tctx=truth.getContext('2d'), fctx=frame.getContext('2d'), octx=overlay.getContext('2d'), trctx=trail.getContext('2d');
+let currentShape='circle', tracking=false, last=null, history=[];
+function clear(ctx,w=520,h=520){ctx.fillStyle='#020202';ctx.fillRect(0,0,w,h)}
+function glyph(){return currentShape==='circle'?'○':currentShape==='triangle'?'△':'□'}
+function rep(ch,n){return ch.repeat(Math.max(1,Math.min(18,Math.round(n))))}
+function drawShape(type){currentShape=type;clear(tctx);tctx.save();tctx.translate(260,260);tctx.strokeStyle='rgba(255,179,71,.96)';tctx.lineWidth=7;tctx.shadowColor='rgba(255,179,71,.45)';tctx.shadowBlur=24;
+if(type==='circle'){tctx.beginPath();tctx.arc(0,0,122,0,Math.PI*2);tctx.stroke()}
+if(type==='triangle'){tctx.beginPath();tctx.moveTo(0,-138);tctx.lineTo(128,100);tctx.lineTo(-128,100);tctx.closePath();tctx.stroke()}
+if(type==='square'){tctx.strokeRect(-120,-120,240,240)}
+tctx.restore();tctx.fillStyle='rgba(255,179,71,.85)';tctx.font='20px Consolas';tctx.fillText('BISCUIT VISION TARGET '+glyph(),18,34);tctx.fillStyle='rgba(255,255,255,.2)';tctx.fillRect(24,480,60,8);tctx.fillRect(436,480,60,8)}
+function downloadTarget(){const a=document.createElement('a');a.download='biscuit-vision-target-'+currentShape+'.png';a.href=truth.toDataURL('image/png');a.click()}
+async function startCamera(){try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});video.srcObject=stream}catch(e){alert('Camera failed: '+e.message)}}
+function toggleTracking(){tracking=!tracking;if(tracking) loop()}
+function bright(data,x,y){x=Math.round(x);y=Math.round(y);if(x<0||x>=520||y<0||y>=520)return 0;const i=(y*520+x)*4;return(data[i]+data[i+1]+data[i+2])/3}
+function loop(){if(!tracking)return;analyzeFrame();requestAnimationFrame(loop)}
+function analyzeFrame(){if(video.videoWidth===0)return;fctx.drawImage(video,0,0,520,520);const img=fctx.getImageData(0,0,520,520),data=img.data;let sx=0,sy=0,c=0,minX=520,maxX=0,minY=520,maxY=0;
+for(let y=0;y<520;y+=2){for(let x=0;x<520;x+=2){const b=bright(data,x,y);if(b>105){sx+=x;sy+=y;c++;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}}}
+const cx=c?sx/c:260, cy=c?sy/c:260, width=maxX-minX, height=maxY-minY, dx=cx-260, dy=cy-260, aspect=Math.abs(width-height);let velocityX=0,velocityY=0;if(last){velocityX=cx-last.cx;velocityY=cy-last.cy}last={cx,cy};
+const lock=Math.max(0,Math.min(100,100-Math.abs(dx)*.38-Math.abs(dy)*.38-aspect*.15+(c>100?8:-20)));
+let sent=[glyph()];if(Math.abs(dx)>6)sent.push(dx>0?`+${rep('-',Math.abs(dx)/11)}*`:`*${rep('_',Math.abs(dx)/11)}+`);if(Math.abs(dy)>6)sent.push(dy<0?`+${rep('|',Math.abs(dy)/11)}*`:`*${rep('I',Math.abs(dy)/11)}+`);if(aspect>18)sent.push(width>height?`↔${rep('-',aspect/24)}*`:`↕${rep('|',aspect/24)}*`);if(Math.abs(velocityX)>2)sent.push(velocityX>0?`motion→${rep('-',Math.abs(velocityX)/3)}*`:`motion←${rep('_',Math.abs(velocityX)/3)}*`);if(Math.abs(velocityY)>2)sent.push(velocityY>0?`motion↓${rep('I',Math.abs(velocityY)/3)}*`:`motion↑${rep('|',Math.abs(velocityY)/3)}*`);
+const sentence=sent.join(' ');drawOverlay(minX,minY,width,height,cx,cy,lock);updateTrail();document.getElementById('sentence').textContent=sentence;document.getElementById('lockFill').style.width=lock+'%';document.getElementById('report').textContent=`LIVE_TRACKING_REPORT{\n  shape:${glyph()},\n  centre:${cx.toFixed(1)},${cy.toFixed(1)},\n  driftX:${dx.toFixed(1)},\n  driftY:${dy.toFixed(1)},\n  width:${width.toFixed(1)},\n  height:${height.toFixed(1)},\n  velocityX:${velocityX.toFixed(1)},\n  velocityY:${velocityY.toFixed(1)},\n  lock:${lock.toFixed(1)}%,\n  framesTracked:${history.length},\n  conclusion:"continuous perspective translated into live deformation language"\n}`;history.push({cx,cy,lock,sentence,t:Date.now()});if(history.length>180)history.shift()}
+function drawOverlay(minX,minY,w,h,cx,cy,lock){clear(octx);octx.drawImage(frame,0,0);octx.strokeStyle=lock>55?'rgba(0,255,153,.9)':'rgba(255,95,109,.9)';octx.lineWidth=3;octx.strokeRect(minX,minY,w,h);octx.fillStyle='rgba(0,255,153,.95)';octx.beginPath();octx.arc(cx,cy,5,0,Math.PI*2);octx.fill();octx.strokeStyle='rgba(255,179,71,.35)';octx.beginPath();octx.arc(cx,cy,120,0,Math.PI*2);octx.stroke()}
+function updateTrail(){clear(trctx,520,240);trctx.strokeStyle='rgba(255,179,71,.2)';trctx.beginPath();trctx.moveTo(0,120);trctx.lineTo(520,120);trctx.stroke();if(history.length<2)return;trctx.beginPath();for(let i=0;i<history.length;i++){const x=(i/(history.length-1))*520,y=120+(history[i].cy-260)*.7;if(i===0)trctx.moveTo(x,y);else trctx.lineTo(x,y)}trctx.strokeStyle='rgba(0,255,153,.8)';trctx.lineWidth=2;trctx.stroke();trctx.fillStyle='rgba(255,179,71,.8)';trctx.font='13px Consolas';trctx.fillText('vertical motion trail / shape lock memory',14,22)}
+function saveGene(){if(!history.length)return;const h=history[history.length-1];const el=document.createElement('span');el.className='gene '+(h.lock<50?'warn':'');el.textContent=`${glyph()} ${h.sentence} ${h.lock.toFixed(0)}%`;el.title=JSON.stringify(h,null,2);document.getElementById('genes').appendChild(el)}
+drawShape('circle');clear(octx);clear(trctx,520,240);
+</script>
+</body>
+</html>
