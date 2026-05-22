@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Biscuit Vision - Live Tracking Eye v2 Predictive</title>
+<style>
+:root{--bg:#050505;--panel:#121212;--gold:#ffb347;--green:#00ff99;--blue:#7dd7ff;--red:#ff5f6d;--purple:#c792ff}
+*{box-sizing:border-box}
+body{margin:0;padding:20px;background:radial-gradient(circle at top left,rgba(255,179,71,.15),transparent 35%),radial-gradient(circle at bottom right,rgba(0,255,153,.12),transparent 35%),var(--bg);color:#eee;font-family:Consolas,Monaco,monospace}
+h1{margin:0 0 8px;color:var(--gold)}p{color:#bbb;line-height:1.45}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:950px){.grid{grid-template-columns:1fr}}
+.panel{margin-top:16px;padding:16px;background:#121212;border:1px solid #333;border-radius:18px}
+.label{color:var(--gold);font-weight:900;margin-bottom:10px}
+canvas,video{width:100%;background:#020202;border:1px solid #222;border-radius:14px;display:block}
+button{margin:8px 8px 0 0;padding:10px 14px;border:0;border-radius:12px;background:var(--gold);font-weight:900;cursor:pointer;color:#111}
+button.good{background:var(--green)}button.alt{background:var(--blue)}button.bad{background:var(--red)}button.purple{background:var(--purple)}
+.big{font-size:21px;line-height:1.55;color:var(--gold);background:#070707;border:1px dashed #555;border-radius:14px;padding:14px;min-height:76px;word-break:break-word}
+pre{white-space:pre-wrap;word-break:break-word;color:#8cffc1;line-height:1.45}
+.bar{height:14px;background:#222;border-radius:999px;overflow:hidden;margin-top:10px}.fill{height:100%;background:var(--green);width:0%;transition:.18s}
+.gene{display:inline-block;padding:7px 10px;margin:4px;border-radius:999px;background:#080808;border:1px solid rgba(0,255,153,.45);color:var(--green)}
+.warn{border-color:rgba(255,95,109,.45);color:var(--red)}.small{font-size:12px;color:#888}
+.row{display:grid;grid-template-columns:160px 1fr;gap:8px;margin:6px 0}
+</style>
+</head>
+<body>
+<h1>👁 Biscuit Vision — Live Tracking Eye v2</h1>
+<p>Continuous webcam perception with <b>prediction</b>: the eye guesses the next deformation, then checks if reality agrees.</p>
+
+<div class="grid">
+<div class="panel">
+<div class="label">1. Truth Shape / Test Paper</div>
+<canvas id="truth" width="520" height="520"></canvas>
+<button onclick="drawShape('circle')">○ Circle</button>
+<button class="alt" onclick="drawShape('triangle')">△ Triangle</button>
+<button class="alt" onclick="drawShape('square')">□ Square</button>
+<button onclick="downloadTarget()">Download Target</button>
+<p class="small">Desktop = target. Phone = moving eye. Open this same page on both.</p>
+</div>
+<div class="panel">
+<div class="label">2. Live Camera + Phone Sensors</div>
+<video id="video" autoplay playsinline muted></video><canvas id="frame" width="520" height="520" style="display:none"></canvas>
+<button class="good" onclick="startCamera()">Start Camera</button>
+<button onclick="toggleTracking()">Start / Stop Tracking</button>
+<button class="purple" onclick="enableSensors()">Enable Phone Sensors</button>
+<button class="bad" onclick="saveGene()">Save Gene</button>
+</div>
+</div>
+
+<div class="grid">
+<div class="panel"><div class="label">3. Live Eye Overlay + Prediction</div><canvas id="overlay" width="520" height="520"></canvas></div>
+<div class="panel">
+<div class="label">4. Deformation + Prediction Language</div>
+<div id="sentence" class="big">waiting...</div>
+<div class="row"><span>Lock</span><div><div class="bar"><div id="lockFill" class="fill"></div></div></div></div>
+<div class="row"><span>Prediction</span><div><div class="bar"><div id="predFill" class="fill" style="background:var(--purple)"></div></div></div></div>
+<pre id="report"></pre>
+</div>
+</div>
+
+<div class="grid">
+<div class="panel"><div class="label">5. Motion + Prediction Trail</div><canvas id="trail" width="520" height="260"></canvas></div>
+<div class="panel"><div class="label">6. Learned Predictive Genes</div><div id="genes"></div></div>
+</div>
+
+<script>
+const truth=document.getElementById('truth'), video=document.getElementById('video'), frame=document.getElementById('frame'), overlay=document.getElementById('overlay'), trail=document.getElementById('trail');
+const tctx=truth.getContext('2d'), fctx=frame.getContext('2d'), octx=overlay.getContext('2d'), trctx=trail.getContext('2d');
+let currentShape='circle', tracking=false, history=[], last=null, predicted=null, sensors={alpha:null,beta:null,gamma:null,enabled:false};
+
+function clear(ctx,w=520,h=520){ctx.fillStyle='#020202';ctx.fillRect(0,0,w,h)}
+function glyph(){return currentShape==='circle'?'○':currentShape==='triangle'?'△':'□'}
+function rep(ch,n){return ch.repeat(Math.max(1,Math.min(18,Math.round(n))))}
+
+function drawShape(type){
+ currentShape=type; clear(tctx); tctx.save(); tctx.translate(260,260);
+ tctx.strokeStyle='rgba(255,179,71,.96)'; tctx.lineWidth=7; tctx.shadowColor='rgba(255,179,71,.45)'; tctx.shadowBlur=24;
+ if(type==='circle'){tctx.beginPath();tctx.arc(0,0,122,0,Math.PI*2);tctx.stroke()}
+ if(type==='triangle'){tctx.beginPath();tctx.moveTo(0,-138);tctx.lineTo(128,100);tctx.lineTo(-128,100);tctx.closePath();tctx.stroke()}
+ if(type==='square'){tctx.strokeRect(-120,-120,240,240)}
+ tctx.restore(); tctx.fillStyle='rgba(255,179,71,.85)'; tctx.font='20px Consolas'; tctx.fillText('BISCUIT VISION TARGET '+glyph(),18,34);
+ tctx.fillStyle='rgba(255,255,255,.2)'; tctx.fillRect(24,480,60,8); tctx.fillRect(436,480,60,8);
+}
+function downloadTarget(){const a=document.createElement('a');a.download='biscuit-vision-target-'+currentShape+'.png';a.href=truth.toDataURL('image/png');a.click()}
+async function startCamera(){try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});video.srcObject=stream}catch(e){alert('Camera failed: '+e.message)}}
+function toggleTracking(){tracking=!tracking;if(tracking) loop()}
+
+async function enableSensors(){
+ try{
+  if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
+    const res=await DeviceOrientationEvent.requestPermission();
+    if(res!=='granted') return alert('Sensor permission denied');
+  }
+  window.addEventListener('deviceorientation',e=>{sensors.alpha=e.alpha;sensors.beta=e.beta;sensors.gamma=e.gamma;sensors.enabled=true});
+  alert('Phone sensors enabled if supported.');
+ }catch(e){alert('Sensor start failed: '+e.message)}
+}
+
+function bright(data,x,y){x=Math.round(x);y=Math.round(y);if(x<0||x>=520||y<0||y>=520)return 0;const i=(y*520+x)*4;return(data[i]+data[i+1]+data[i+2])/3}
+function loop(){if(!tracking)return;analyzeFrame();requestAnimationFrame(loop)}
+
+function predictNext(){
+ if(history.length<4) return null;
+ const h=history.slice(-5);
+ let vx=0,vy=0;
+ for(let i=1;i<h.length;i++){vx+=h[i].cx-h[i-1].cx;vy+=h[i].cy-h[i-1].cy}
+ vx/=h.length-1; vy/=h.length-1;
+ const last=h[h.length-1];
+ return {cx:last.cx+vx,cy:last.cy+vy,vx,vy};
+}
+
+function analyzeFrame(){
+ if(video.videoWidth===0)return;
+ predicted=predictNext();
+ fctx.drawImage(video,0,0,520,520);
+ const img=fctx.getImageData(0,0,520,520),data=img.data;
+ let sx=0,sy=0,c=0,minX=520,maxX=0,minY=520,maxY=0;
+ for(let y=0;y<520;y+=2){for(let x=0;x<520;x+=2){const b=bright(data,x,y);if(b>105){sx+=x;sy+=y;c++;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}}}
+ const cx=c?sx/c:260, cy=c?sy/c:260, width=maxX-minX, height=maxY-minY, dx=cx-260, dy=cy-260, aspect=Math.abs(width-height);
+ let velocityX=0,velocityY=0;if(last){velocityX=cx-last.cx;velocityY=cy-last.cy}last={cx,cy};
+ let predictionScore=0,predErr=999;
+ if(predicted){predErr=Math.hypot(cx-predicted.cx,cy-predicted.cy);predictionScore=Math.max(0,100-predErr*4)}
+ const lock=Math.max(0,Math.min(100,100-Math.abs(dx)*.38-Math.abs(dy)*.38-aspect*.15+(c>100?8:-20)));
+ const sentence=buildSentence(dx,dy,aspect,velocityX,velocityY,predictionScore);
+ drawOverlay(minX,minY,width,height,cx,cy,lock,predicted);
+ updateTrail();
+ document.getElementById('sentence').textContent=sentence;
+ document.getElementById('lockFill').style.width=lock+'%'; document.getElementById('predFill').style.width=predictionScore+'%';
+ document.getElementById('report').textContent=`LIVE_PREDICTIVE_REPORT{
+  shape:${glyph()},
+  centre:${cx.toFixed(1)},${cy.toFixed(1)},
+  driftX:${dx.toFixed(1)},
+  driftY:${dy.toFixed(1)},
+  velocityX:${velocityX.toFixed(1)},
+  velocityY:${velocityY.toFixed(1)},
+  predictedNext:${predicted?predicted.cx.toFixed(1)+','+predicted.cy.toFixed(1):'learning'},
+  predictionError:${predicted?predErr.toFixed(1):'learning'},
+  predictionScore:${predictionScore.toFixed(1)}%,
+  lock:${lock.toFixed(1)}%,
+  phoneAlpha:${sensors.alpha===null?'n/a':sensors.alpha.toFixed(1)},
+  phoneBeta:${sensors.beta===null?'n/a':sensors.beta.toFixed(1)},
+  phoneGamma:${sensors.gamma===null?'n/a':sensors.gamma.toFixed(1)},
+  framesTracked:${history.length},
+  conclusion:"the eye is comparing expected deformation against observed reality"
+}`;
+ history.push({cx,cy,lock,sentence,predictionScore,velocityX,velocityY,sensors:{...sensors},t:Date.now()}); if(history.length>240)history.shift();
+}
+
+function buildSentence(dx,dy,aspect,vx,vy,ps){
+ let sent=[glyph()];
+ if(Math.abs(dx)>6)sent.push(dx>0?`+${rep('-',Math.abs(dx)/11)}*`:`*${rep('_',Math.abs(dx)/11)}+`);
+ if(Math.abs(dy)>6)sent.push(dy<0?`+${rep('|',Math.abs(dy)/11)}*`:`*${rep('I',Math.abs(dy)/11)}+`);
+ if(aspect>18)sent.push(`warp${rep('~',aspect/22)}*`);
+ if(Math.abs(vx)>2)sent.push(vx>0?`motion→${rep('-',Math.abs(vx)/3)}*`:`motion←${rep('_',Math.abs(vx)/3)}*`);
+ if(Math.abs(vy)>2)sent.push(vy>0?`motion↓${rep('I',Math.abs(vy)/3)}*`:`motion↑${rep('|',Math.abs(vy)/3)}*`);
+ if(ps>70)sent.push('predict✓'); else if(ps>0)sent.push('predict?'); else sent.push('predict…');
+ return sent.join(' ');
+}
+
+function drawOverlay(minX,minY,w,h,cx,cy,lock,pred){
+ clear(octx); octx.drawImage(frame,0,0);
+ octx.strokeStyle=lock>55?'rgba(0,255,153,.9)':'rgba(255,95,109,.9)'; octx.lineWidth=3; octx.strokeRect(minX,minY,w,h);
+ octx.fillStyle='rgba(0,255,153,.95)'; octx.beginPath(); octx.arc(cx,cy,5,0,Math.PI*2); octx.fill();
+ if(pred){octx.strokeStyle='rgba(199,146,255,.95)';octx.lineWidth=3;octx.beginPath();octx.arc(pred.cx,pred.cy,12,0,Math.PI*2);octx.stroke();octx.beginPath();octx.moveTo(pred.cx-18,pred.cy);octx.lineTo(pred.cx+18,pred.cy);octx.moveTo(pred.cx,pred.cy-18);octx.lineTo(pred.cx,pred.cy+18);octx.stroke()}
+}
+
+function updateTrail(){
+ clear(trctx,520,260); trctx.strokeStyle='rgba(255,179,71,.2)'; trctx.beginPath(); trctx.moveTo(0,130); trctx.lineTo(520,130); trctx.stroke();
+ if(history.length<2)return;
+ trctx.beginPath(); for(let i=0;i<history.length;i++){const x=(i/(history.length-1))*520,y=130+(history[i].cy-260)*.65;if(i===0)trctx.moveTo(x,y);else trctx.lineTo(x,y)} trctx.strokeStyle='rgba(0,255,153,.8)'; trctx.lineWidth=2; trctx.stroke();
+ trctx.beginPath(); for(let i=0;i<history.length;i++){const x=(i/(history.length-1))*520,y=245-(history[i].predictionScore||0)*1.0;if(i===0)trctx.moveTo(x,y);else trctx.lineTo(x,y)} trctx.strokeStyle='rgba(199,146,255,.8)'; trctx.stroke();
+ trctx.fillStyle='rgba(255,179,71,.8)'; trctx.font='13px Consolas'; trctx.fillText('green=motion trail / purple=prediction score',14,22);
+}
+
+function saveGene(){
+ if(!history.length)return; const h=history[history.length-1]; const el=document.createElement('span');
+ el.className='gene '+(h.lock<50?'warn':''); el.textContent=`${glyph()} ${h.sentence} L${h.lock.toFixed(0)} P${h.predictionScore.toFixed(0)}`; el.title=JSON.stringify(h,null,2);
+ document.getElementById('genes').appendChild(el);
+}
+drawShape('circle'); clear(octx); clear(trctx,520,260);
+</script>
+</body>
+</html>
