@@ -1,0 +1,398 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Biscuit Vision — Phone Eye</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+:root{
+  --bg:#050505;
+  --panel:#121212;
+  --gold:#ffb347;
+  --green:#00ff99;
+  --blue:#7dd7ff;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  padding:20px;
+  background:
+    radial-gradient(circle at top left,rgba(255,179,71,.15),transparent 35%),
+    radial-gradient(circle at bottom right,rgba(0,255,153,.1),transparent 35%),
+    var(--bg);
+  color:#eee;
+  font-family:Consolas,monospace;
+}
+
+h1{
+  margin:0;
+  color:var(--gold);
+}
+
+.panel{
+  margin-top:16px;
+  padding:16px;
+  background:#121212;
+  border:1px solid #333;
+  border-radius:18px;
+}
+
+.label{
+  color:var(--gold);
+  font-weight:900;
+  margin-bottom:10px;
+}
+
+#reader{
+  width:100%;
+  border-radius:12px;
+  overflow:hidden;
+}
+
+video{
+  width:100%;
+  border-radius:12px;
+  background:black;
+}
+
+button{
+  margin:8px 8px 0 0;
+  padding:10px 14px;
+  border:0;
+  border-radius:12px;
+  background:var(--gold);
+  color:#111;
+  font-weight:900;
+  cursor:pointer;
+}
+
+button.good{
+  background:var(--green);
+}
+
+pre{
+  white-space:pre-wrap;
+  word-break:break-word;
+  color:#8cffc1;
+}
+
+.status{
+  margin-top:12px;
+  padding:12px;
+  background:#070707;
+  border:1px solid #333;
+  border-radius:12px;
+}
+
+.big{
+  font-size:22px;
+  color:var(--gold);
+}
+
+.lock{
+  color:var(--green);
+  font-weight:900;
+}
+</style>
+</head>
+<body>
+
+<h1>👁 Biscuit Vision — Phone Eye</h1>
+
+<div class="panel">
+
+<div class="label">1. Scan QR Session</div>
+
+<div id="reader"></div>
+
+<div class="status">
+<div class="big">Session State</div>
+
+<pre id="sessionState">
+waiting for QR session...
+</pre>
+</div>
+
+</div>
+
+<div class="panel">
+
+<div class="label">2. Live Observer Camera</div>
+
+<video id="video" autoplay playsinline muted></video>
+
+<div class="status">
+<div class="big">Deformation Stream</div>
+
+<pre id="deformStream">
+waiting for observer lock...
+</pre>
+</div>
+
+<button onclick="startSensors()">Enable Sensors</button>
+<button class="good" onclick="startStreaming()">Begin Genome Stream</button>
+
+</div>
+
+<script>
+
+let session = null;
+let sensorData = {
+  alpha:0,
+  beta:0,
+  gamma:0
+};
+
+let streaming = false;
+
+const stateEl = document.getElementById("sessionState");
+const deformEl = document.getElementById("deformStream");
+const video = document.getElementById("video");
+
+
+// =====================================
+// CAMERA
+// =====================================
+
+async function startCamera(){
+
+  try{
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:"environment"
+      },
+      audio:false
+    });
+
+    video.srcObject = stream;
+
+    console.log("camera active");
+
+  }catch(err){
+    console.error(err);
+  }
+}
+
+
+// =====================================
+// QR SCANNER
+// =====================================
+
+const scanner = new Html5Qrcode("reader");
+
+scanner.start(
+  { facingMode:"environment" },
+  {
+    fps:10,
+    qrbox:250
+  },
+
+  async (decodedText)=>{
+
+    try{
+
+      session = JSON.parse(decodedText);
+
+      stateEl.textContent =
+`SESSION LOCKED ✓
+
+protocol:
+${session.protocol}
+
+session:
+${session.session}
+
+observer:
+phone_eye
+
+desktop:
+${session.observer}`;
+
+      if(navigator.vibrate){
+        navigator.vibrate([140,50,140]);
+      }
+
+      await scanner.stop();
+
+      startCamera();
+
+    }catch(err){
+
+      console.error(err);
+    }
+  },
+
+  (errorMessage)=>{}
+);
+
+
+// =====================================
+// SENSORS
+// =====================================
+
+async function startSensors(){
+
+  try{
+
+    if(
+      typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function'
+    ){
+
+      const permission =
+        await DeviceOrientationEvent.requestPermission();
+
+      if(permission !== 'granted'){
+        alert("Sensor permission denied");
+        return;
+      }
+    }
+
+    window.addEventListener('deviceorientation',(e)=>{
+
+      sensorData.alpha = e.alpha || 0;
+      sensorData.beta = e.beta || 0;
+      sensorData.gamma = e.gamma || 0;
+
+    });
+
+    alert("Sensors active");
+
+  }catch(err){
+    console.error(err);
+  }
+}
+
+
+// =====================================
+// DEFORMATION LANGUAGE
+// =====================================
+
+function generateDeformation(){
+
+  let sentence = "○ ";
+
+  if(sensorData.gamma > 20){
+    sentence += "+-----* ";
+  }
+
+  if(sensorData.gamma < -20){
+    sentence += "*_____+ ";
+  }
+
+  if(sensorData.beta > 20){
+    sentence += "*IIIII+ ";
+  }
+
+  if(sensorData.beta < -20){
+    sentence += "+|||||* ";
+  }
+
+  if(Math.abs(sensorData.alpha) > 45){
+    sentence += "warp~~~* ";
+  }
+
+  sentence += "predict✓ ";
+
+  return sentence;
+}
+
+
+// =====================================
+// TRANSMIT
+// =====================================
+
+async function transmitGenome(payload){
+
+  console.log("TRANSMIT", payload);
+
+  // placeholder transport
+  // replace later with:
+  // websocket
+  // webrtc
+  // supabase realtime
+
+  try{
+
+    await fetch("/genome",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify(payload)
+    });
+
+  }catch(err){
+
+    console.log("local mode only");
+  }
+}
+
+
+// =====================================
+// STREAM LOOP
+// =====================================
+
+function startStreaming(){
+
+  if(!session){
+    alert("scan QR first");
+    return;
+  }
+
+  streaming = true;
+
+  deformEl.textContent =
+`observer active ✓
+
+streaming deformation genome...
+`;
+
+  setInterval(async ()=>{
+
+    if(!streaming) return;
+
+    const sentence = generateDeformation();
+
+    const payload = {
+
+      session:session.session,
+
+      observer:"phone_eye",
+
+      sensors:sensorData,
+
+      deformation:sentence,
+
+      timestamp:Date.now()
+    };
+
+    deformEl.textContent =
+`LIVE_DEFORMATION_REPORT{
+
+  session:${session.session},
+
+  alpha:${sensorData.alpha.toFixed(2)},
+  beta:${sensorData.beta.toFixed(2)},
+  gamma:${sensorData.gamma.toFixed(2)},
+
+  deformation:"${sentence}"
+
+}`;
+
+    await transmitGenome(payload);
+
+  },1000);
+}
+
+</script>
+
+</body>
+</html>
