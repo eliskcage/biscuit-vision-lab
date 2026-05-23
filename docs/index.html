@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Biscuit Vision — Perceptual Session Roadmap</title>
+<style>
+:root{
+  --bg:#050505;--panel:#121212;--gold:#ffb347;--green:#00ff99;
+  --blue:#7dd7ff;--purple:#c792ff;--red:#ff5f6d;--muted:#888;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;padding:22px;background:
+  radial-gradient(circle at top left,rgba(255,179,71,.16),transparent 35%),
+  radial-gradient(circle at bottom right,rgba(0,255,153,.12),transparent 35%),
+  var(--bg);
+  color:#eee;font-family:Consolas,Monaco,monospace;
+}
+h1{margin:0;color:var(--gold)}
+p{color:#bbb;line-height:1.45}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:950px){.grid{grid-template-columns:1fr}}
+.panel{
+  margin-top:16px;padding:16px;background:rgba(18,18,18,.95);
+  border:1px solid #333;border-radius:18px;
+}
+.label{color:var(--gold);font-weight:900;margin-bottom:10px}
+.hero{
+  display:grid;grid-template-columns:1fr 280px;gap:18px;align-items:center;
+}
+@media(max-width:850px){.hero{grid-template-columns:1fr}}
+.phoneDock{
+  height:430px;border:2px dashed rgba(255,179,71,.45);border-radius:42px;
+  display:grid;place-items:center;position:relative;background:#070707;
+  box-shadow:inset 0 0 40px rgba(255,179,71,.04);
+}
+.phoneDock:before{
+  content:"";position:absolute;top:18px;width:80px;height:8px;border-radius:99px;
+  background:#222;border:1px solid #444;
+}
+.phoneDock .cross{
+  position:absolute;width:44px;height:44px;border-radius:50%;border:1px solid rgba(0,255,153,.6);
+  display:grid;place-items:center;color:var(--green);font-weight:900;
+}
+.phoneDock .cross:before{content:"+"}
+.phoneDock .qr{
+  width:128px;height:128px;background:
+    linear-gradient(90deg,#fff 10px,transparent 10px) 0 0/20px 20px,
+    linear-gradient(#fff 10px,transparent 10px) 0 0/20px 20px,#000;
+  border:10px solid #fff;border-radius:10px;opacity:.85;
+}
+.phase{
+  border:1px solid #333;background:#080808;border-radius:14px;padding:12px;margin:10px 0;
+  display:grid;grid-template-columns:42px 1fr auto;gap:12px;align-items:center;
+}
+.badge{
+  width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+  background:#181818;border:1px solid #444;color:#777;font-weight:900;
+}
+.done .badge{color:#111;background:var(--green);border-color:var(--green)}
+.active .badge{color:#111;background:var(--gold);border-color:var(--gold)}
+.phase h3{margin:0 0 5px;font-size:16px}
+.phase small{color:#999}
+.status{
+  font-size:12px;border:1px solid #444;border-radius:99px;padding:6px 10px;color:#aaa;
+}
+.done .status{border-color:rgba(0,255,153,.5);color:var(--green)}
+.active .status{border-color:rgba(255,179,71,.5);color:var(--gold)}
+.bigScore{font-size:42px;color:var(--gold);font-weight:900}
+.progressOuter{height:18px;background:#222;border-radius:999px;overflow:hidden;margin-top:12px}
+.progressInner{height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--gold));transition:.8s}
+.step{
+  display:flex;gap:12px;align-items:flex-start;margin:10px 0;padding:10px;
+  border:1px solid #2d2d2d;border-radius:12px;background:#080808;
+}
+.num{
+  min-width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  background:var(--gold);color:#111;font-weight:900;
+}
+.gene{
+  display:block;border:1px solid #333;border-radius:12px;background:#070707;
+  padding:10px;margin:8px 0;color:#ddd;
+}
+.gene b{color:var(--gold)}
+.unlock{border-color:rgba(0,255,153,.45);box-shadow:0 0 24px rgba(0,255,153,.08)}
+button{
+  margin:8px 8px 0 0;padding:10px 14px;border:0;border-radius:12px;
+  background:var(--gold);font-weight:900;cursor:pointer;color:#111;
+}
+button.good{background:var(--green)}button.alt{background:var(--blue)}button.bad{background:var(--red)}
+input,select,textarea{
+  width:100%;background:#070707;color:#eee;border:1px solid #333;border-radius:10px;
+  padding:10px;font-family:inherit;margin:6px 0;
+}
+textarea{min-height:90px}
+pre{white-space:pre-wrap;word-break:break-word;color:#8cffc1;line-height:1.45}
+.tag{display:inline-block;margin:3px;padding:5px 8px;border-radius:999px;border:1px solid #444;color:#aaa;font-size:12px}
+</style>
+</head>
+<body>
+
+<h1>👁 Biscuit Vision — Perceptual Session Roadmap</h1>
+<p>
+The roadmap has evolved around the core ritual: desktop creates truth, phone becomes the eye, QR pairs the session, the dock fixes origin, vibration confirms lock, and long-hold commits the perceptual genome.
+</p>
+
+<div class="panel hero">
+  <div>
+    <div class="label">Core Architecture</div>
+    <h2>Calibrated Perceptual Session</h2>
+    <p>
+      The system becomes powerful when every experiment starts from a known physical origin.
+      The phone-shaped dock gives the observer a body, the QR gives it identity, and vibration confirms calibration.
+    </p>
+    <div class="progressOuter"><div id="progressBar" class="progressInner"></div></div>
+    <p><span class="bigScore"><span id="progressText">0</span>%</span> roadmap unlocked locally</p>
+  </div>
+  <div class="phoneDock">
+    <div class="cross" style="top:88px;left:50%;transform:translateX(-50%)"></div>
+    <div class="qr"></div>
+    <div class="cross" style="bottom:88px;left:50%;transform:translateX(-50%)"></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <div class="label">Pairing Ritual</div>
+    <div class="step"><div class="num">1</div><div><b>Desktop creates truth</b><br><small>Shows target shape, session QR, phone dock, and calibration marks.</small></div></div>
+    <div class="step"><div class="num">2</div><div><b>Phone scans QR</b><br><small>Phone joins the exact perceptual session.</small></div></div>
+    <div class="step"><div class="num">3</div><div><b>Phone enters dock</b><br><small>Phone aligns with the screen silhouette to establish observer origin.</small></div></div>
+    <div class="step"><div class="num">4</div><div><b>Vibration lock</b><br><small>Phone vibrates when alignment/orientation is stable enough.</small></div></div>
+    <div class="step"><div class="num">5</div><div><b>Long-hold confirm</b><br><small>User commits the calibrated observer state.</small></div></div>
+    <div class="step"><div class="num">6</div><div><b>Perception begins</b><br><small>Movement becomes deformation language and genome evidence.</small></div></div>
+  </div>
+
+  <div class="panel">
+    <div class="label">Evidence Input</div>
+    <select id="evidenceType">
+      <option value="prediction">Prediction gene</option>
+      <option value="sensor">Sensor fusion gene</option>
+      <option value="pairing">QR pairing gene</option>
+      <option value="dock">Dock calibration gene</option>
+      <option value="observer">Observer species gene</option>
+      <option value="lens">Inverse lens gene</option>
+      <option value="barcode">Barcode geometry gene</option>
+    </select>
+    <input id="lockScore" type="number" min="0" max="100" placeholder="Lock score %">
+    <input id="predictionScore" type="number" min="0" max="100" placeholder="Prediction score %">
+    <textarea id="geneText" placeholder="Paste report / deformation sentence / discovery here"></textarea>
+    <button class="good" onclick="addGene()">Add Evidence Gene</button>
+    <button class="alt" onclick="exportGenes()">Export Genome JSON</button>
+    <button class="bad" onclick="resetData()">Reset Local Data</button>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <div class="label">Live Roadmap</div>
+    <div id="roadmap"></div>
+  </div>
+  <div class="panel">
+    <div class="label">Perceptual Genome Archive</div>
+    <div id="genes"></div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="label">Architecture Tags</div>
+  <span class="tag">QR handshake</span>
+  <span class="tag">phone dock</span>
+  <span class="tag">vibration lock</span>
+  <span class="tag">long-hold commit</span>
+  <span class="tag">known observer origin</span>
+  <span class="tag">deformation language</span>
+  <span class="tag">inverse lenses</span>
+  <span class="tag">prediction</span>
+  <span class="tag">sensor fusion</span>
+  <span class="tag">digital genomics</span>
+</div>
+
+<script>
+const phases=[
+ {id:1,title:'Internal Truth Shapes',desc:'Perfect circle, triangle and square truth memories.',status:'done'},
+ {id:2,title:'Deformation Language',desc:'Symbols describe distance travelled away from perfect.',status:'done'},
+ {id:3,title:'Inverse Lens Recovery',desc:'Corrective lenses restore distorted shapes.',status:'done'},
+ {id:4,title:'Webcam Reality',desc:'Real camera perspective translated into strain language.',status:'done'},
+ {id:5,title:'Continuous Tracking',desc:'Identity persists across time and motion.',status:'done'},
+ {id:6,title:'Predictive Eye',desc:'Expected deformation compared against observed reality.',status:'active',unlock:'prediction'},
+ {id:7,title:'QR Pairing Ritual',desc:'Desktop and phone join the same perceptual session.',status:'active',unlock:'pairing'},
+ {id:8,title:'Phone Dock Calibration',desc:'Phone-shaped dock fixes observer origin and screen position.',status:'active',unlock:'dock'},
+ {id:9,title:'Vibration Lock + Long-Hold Commit',desc:'User feels alignment and commits calibration physically.',status:'locked',unlock:'dock'},
+ {id:10,title:'Sensor Fusion',desc:'Phone orientation and motion predict visual deformation.',status:'locked',unlock:'sensor'},
+ {id:11,title:'Observer Species',desc:'Circle eye, triangle eye, square eye, edge eye, symmetry eye.',status:'locked',unlock:'observer'},
+ {id:12,title:'Lens Evolution',desc:'Recovery lens chains mutate and compete.',status:'locked',unlock:'lens'},
+ {id:13,title:'Genome Dashboard',desc:'Auto milestones, lineage, contribution archive, live progress.',status:'active'},
+ {id:14,title:'Procedural Barcode Geometry',desc:'Self-describing geometry that maps onto itself.',status:'locked',unlock:'barcode'},
+ {id:15,title:'Game World Perception Lab',desc:'The game becomes a synthetic perception evolution world.',status:'locked'},
+ {id:16,title:'Autonomous Perception Genome',desc:'The eye observes, predicts, recovers, mutates and validates.',status:'locked'}
+];
+
+let genes=JSON.parse(localStorage.getItem('biscuit_session_genes')||'[]');
+
+function render(){
+ const road=document.getElementById('roadmap');
+ road.innerHTML='';
+ let unlocked=0;
+ phases.forEach(p=>{
+   let effective=p.status;
+   if(p.unlock && genes.some(g=>g.type===p.unlock && (g.lock>=60 || g.prediction>=60 || g.text.length>20))) effective='done';
+   if(effective==='done') unlocked++;
+   if(effective==='active') unlocked += 0.5;
+   const div=document.createElement('div');
+   div.className='phase '+effective;
+   div.innerHTML='<div class="badge">'+(effective==='done'?'✓':effective==='active'?'…':'🔒')+'</div><div><h3>Phase '+p.id+' — '+p.title+'</h3><small>'+p.desc+'</small></div><div class="status">'+effective.toUpperCase()+'</div>';
+   road.appendChild(div);
+ });
+ const pct=Math.round((unlocked/phases.length)*100);
+ document.getElementById('progressText').textContent=pct;
+ document.getElementById('progressBar').style.width=pct+'%';
+ renderGenes();
+}
+
+function addGene(){
+ const type=document.getElementById('evidenceType').value;
+ const lock=Number(document.getElementById('lockScore').value||0);
+ const prediction=Number(document.getElementById('predictionScore').value||0);
+ const text=document.getElementById('geneText').value.trim();
+ if(!text && !lock && !prediction)return;
+ genes.unshift({id:'gene_'+Date.now(),time:new Date().toISOString(),type,lock,prediction,text});
+ localStorage.setItem('biscuit_session_genes',JSON.stringify(genes));
+ document.getElementById('geneText').value='';
+ render();
+}
+
+function renderGenes(){
+ const box=document.getElementById('genes');
+ box.innerHTML='';
+ genes.slice(0,60).forEach(g=>{
+   const div=document.createElement('div');
+   div.className='gene '+((g.lock>=60||g.prediction>=60||g.text.length>20)?'unlock':'');
+   div.innerHTML='<b>'+g.type+'</b> · lock '+g.lock+'% · prediction '+g.prediction+'%<br><small>'+g.time+'</small><pre>'+escapeHtml(g.text)+'</pre>';
+   box.appendChild(div);
+ });
+}
+
+function escapeHtml(s){
+ return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+
+function exportGenes(){
+ const blob=new Blob([JSON.stringify({project:'Biscuit Vision Calibrated Perceptual Session Genome',genes},null,2)],{type:'application/json'});
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='biscuit-vision-session-genome.json';
+ a.click();
+}
+
+function resetData(){
+ if(confirm('Clear local evidence genes?')){
+   genes=[];
+   localStorage.removeItem('biscuit_session_genes');
+   render();
+ }
+}
+render();
+</script>
+</body>
+</html>
